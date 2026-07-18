@@ -479,3 +479,15 @@ struct IntensityGraphView: View {
         .allowsHitTesting(false)
     }
 }
+
+// Restore native swipe-to-go-back gesture when navigation bar is hidden
+extension UINavigationController: @retroactive UIGestureRecognizerDelegate {
+    override open func viewDidLoad() {
+        super.viewDidLoad()
+        interactivePopGestureRecognizer?.delegate = self
+    }
+
+    public func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        return viewControllers.count > 1
+    }
+}

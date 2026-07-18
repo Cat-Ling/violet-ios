@@ -166,6 +166,14 @@ class VioletClient {
         return ImageRequest(urlRequest: request, processors: processors)
     }
     
+    func makeThumbnailRequest(from urlString: String?, articleId: Int) -> ImageRequest? {
+        guard var urlString = urlString else { return nil }
+        if urlString.hasPrefix("//") {
+            urlString = "https:" + urlString
+        }
+        return getDirectImageRequest(url: urlString, referer: "https://hitomi.la/reader/\(articleId).html", width: 400)
+    }
+    
     func fetchThumbnailRequest(articleId: Int) async throws -> ImageRequest? {
         guard let base = baseURL else { return nil }
         let url = base.appendingPathComponent("proxy/thumbnail/\(articleId)")

@@ -15,6 +15,30 @@ struct ArticleView: View {
     @State private var lastPage: Int? = nil
     @AppStorage("themeColor") private var themeColor = "purple"
     
+    private var skeletonPlaceholder: some View {
+        Color.secondary.opacity(0.1)
+            .frame(height: 300)
+            .frame(maxWidth: .infinity)
+            .overlay { ProgressView() }
+    }
+    
+    private var errorPlaceholder: some View {
+        Color.secondary.opacity(0.1)
+            .frame(height: 300)
+            .frame(maxWidth: .infinity)
+            .overlay {
+                VStack(spacing: 8) {
+                    Image(systemName: "photo.badge.exclamationmark")
+                        .font(.largeTitle)
+                    Text("Cover Unavailable")
+                        .font(.subheadline)
+                }
+                .foregroundStyle(.secondary.opacity(0.5))
+            }
+    }
+    
+    @State private var hasAttemptedFallback = false
+    
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
@@ -25,24 +49,56 @@ struct ArticleView: View {
                             image
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
+                                .frame(maxWidth: .infinity)
                         } else if state.error != nil {
-                            Image(systemName: "photo.badge.exclamationmark")
+                            errorPlaceholder
                         } else {
-                            ProgressView()
-                                .frame(height: 300)
+                            skeletonPlaceholder
                         }
                     }
-                    .frame(maxWidth: .infinity)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .padding(.horizontal)
+                    .shadow(radius: 8)
+                } else if let request = client.makeThumbnailRequest(from: article.thumbnail, articleId: article.id) {
+                    LazyImage(request: request) { state in
+                        if let image = state.image {
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(maxWidth: .infinity)
+                        } else if state.error != nil {
+                            if !hasAttemptedFallback {
+                                skeletonPlaceholder
+                                    .task {
+                                        thumbnailRequest = try? await client.fetchThumbnailRequest(articleId: article.id)
+                                        hasAttemptedFallback = true
+                                    }
+                            } else {
+                                errorPlaceholder
+                            }
+                        } else {
+                            skeletonPlaceholder
+                        }
+                    }
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .padding(.horizontal)
                     .shadow(radius: 8)
                 } else {
-                    ProgressView()
-                        .frame(height: 300)
-                        .frame(maxWidth: .infinity)
-                        .task {
-                            thumbnailRequest = try? await client.fetchThumbnailRequest(articleId: article.id)
-                        }
+                    if !hasAttemptedFallback {
+                        skeletonPlaceholder
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .padding(.horizontal)
+                            .shadow(radius: 8)
+                            .task {
+                                thumbnailRequest = try? await client.fetchThumbnailRequest(articleId: article.id)
+                                hasAttemptedFallback = true
+                            }
+                    } else {
+                        errorPlaceholder
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .padding(.horizontal)
+                            .shadow(radius: 8)
+                    }
                 }
                 
                 // Title
