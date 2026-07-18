@@ -205,7 +205,6 @@ struct SettingsView: View {
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
-                            .tint(Color.accentColor)
                         }
                 }
             }

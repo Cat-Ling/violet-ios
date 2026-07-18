@@ -91,23 +91,21 @@ struct HomeView: View {
                                 ForEach(filteredArticles) { article in
                                     NavigationLink(destination: ArticleView(article: article)) {
                                         GalleryCard(article: article)
+                                            .onAppear {
+                                                if article.id == filteredArticles.last?.id && canLoadMore && !isFetchingMore {
+                                                    Task { await loadMore() }
+                                                }
+                                            }
                                     }
                                     .buttonStyle(.plain)
                                 }
                             }
                             .padding()
                             
-                            if canLoadMore && !articles.isEmpty {
-                                Color.clear
-                                    .frame(height: 50)
-                                    .onAppear {
-                                        Task { await loadMore() }
-                                    }
-                                if isFetchingMore {
-                                    ProgressView()
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.bottom)
-                                }
+                            if isFetchingMore {
+                                ProgressView()
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.bottom)
                             }
                         }
                         .refreshable {

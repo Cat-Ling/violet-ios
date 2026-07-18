@@ -137,23 +137,21 @@ struct SearchContentView: View {
                     ForEach(articles) { article in
                         NavigationLink(destination: ArticleView(article: article)) {
                             GalleryCard(article: article)
+                                .onAppear {
+                                    if article.id == articles.last?.id && canLoadMore && searchMode == 0 && !isFetchingMore {
+                                        Task { await loadMore() }
+                                    }
+                                }
                         }
                         .buttonStyle(.plain)
                     }
                     }
                     .padding(.horizontal)
                     
-                    if canLoadMore && searchMode == 0 && !articles.isEmpty {
-                        Color.clear
-                            .frame(height: 50)
-                            .onAppear {
-                                Task { await loadMore() }
-                            }
-                        if isFetchingMore {
-                            ProgressView()
-                                .frame(maxWidth: .infinity)
-                                .padding(.bottom)
-                        }
+                    if isFetchingMore {
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
+                            .padding(.bottom)
                     }
             }
             .padding(.vertical)

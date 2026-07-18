@@ -6,32 +6,76 @@ struct GalleryCard: View {
     let article: Article
     @Environment(VioletClient.self) private var client
     @State private var thumbnailRequest: ImageRequest?
-    @State private var isDownloading = false
+    @State private var hasAttemptedFallback = false
+    
+    private var skeletonPlaceholder: some View {
+        Color.secondary.opacity(0.1)
+            .overlay {
+                ProgressView()
+            }
+    }
+    
+    private var errorPlaceholder: some View {
+        Color.secondary.opacity(0.1)
+            .overlay {
+                VStack(spacing: 8) {
+                    Image(systemName: "photo.badge.exclamationmark")
+                        .font(.title2)
+                    Text("Unavailable")
+                        .font(.caption2)
+                }
+                .foregroundStyle(.secondary.opacity(0.5))
+            }
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // Thumbnail
             ZStack {
-                Color.secondary.opacity(0.1)
-                
                 if let request = thumbnailRequest {
                     LazyImage(request: request) { state in
                         if let image = state.image {
                             image
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
                         } else if state.error != nil {
-                            Image(systemName: "photo.badge.exclamationmark")
-                                .foregroundStyle(.secondary)
+                            errorPlaceholder
                         } else {
-                            ProgressView()
+                            skeletonPlaceholder
+                        }
+                    }
+                } else if let request = client.makeThumbnailRequest(from: article.thumbnail, articleId: article.id) {
+                    LazyImage(request: request) { state in
+                        if let image = state.image {
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        } else if state.error != nil {
+                            if !hasAttemptedFallback {
+                                skeletonPlaceholder
+                                    .task {
+                                        thumbnailRequest = try? await client.fetchThumbnailRequest(articleId: article.id)
+                                        hasAttemptedFallback = true
+                                    }
+                            } else {
+                                errorPlaceholder
+                            }
+                        } else {
+                            skeletonPlaceholder
                         }
                     }
                 } else {
-                    ProgressView()
-                        .task {
-                            thumbnailRequest = try? await client.fetchThumbnailRequest(articleId: article.id)
-                        }
+                    if !hasAttemptedFallback {
+                        skeletonPlaceholder
+                            .task {
+                                thumbnailRequest = try? await client.fetchThumbnailRequest(articleId: article.id)
+                                hasAttemptedFallback = true
+                            }
+                    } else {
+                        errorPlaceholder
+                    }
                 }
             }
             .aspectRatio(0.7, contentMode: .fit)
