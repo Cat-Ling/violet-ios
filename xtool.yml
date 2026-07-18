@@ -1,0 +1,15 @@
+version: 1
+bundleID: com.project-violet.violetta
+iconPath: Resources/icon.png
+infoPath: Info.plist
+resources:
+  - Resources/purple.png
+  - Resources/red.png
+  - Resources/orange.png
+  - Resources/green.png
+  - Resources/blue.png
+  - Resources/pink.png
+  - Resources/black.png
+  - Resources/cosmic.png
+  - Resources/origami.png
+  - Resources/watercolor.png
