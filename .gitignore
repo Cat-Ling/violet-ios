@@ -1,0 +1,13 @@
+.DS_Store
+/.build/
+/Packages/
+xcuserdata/
+DerivedData/
+.swiftpm/
+.netrc
+/xtool/
+.sourcekit-lsp/
+Payload/
+*.ipa
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcworkspace/xcuserdata/
