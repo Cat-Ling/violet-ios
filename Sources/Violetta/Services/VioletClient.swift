@@ -178,19 +178,32 @@ class VioletClient {
     }
     
     func fetchThumbnailRequest(articleId: Int) async throws -> ImageRequest? {
-        guard let base = baseURL else { return nil }
-        let url = base.appendingPathComponent("proxy/thumbnail/\(articleId)")
-        
-        let (data, response) = try await session.data(from: url)
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-            throw VioletError.invalidResponse
+        // Try server proxy first
+        if let base = baseURL {
+            let url = base.appendingPathComponent("proxy/thumbnail/\(articleId)")
+            if let (data, response) = try? await session.data(from: url),
+               let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                struct ThumbnailResponse: Codable {
+                    let url: String
+                }
+                if let thumbnail = try? JSONDecoder().decode(ThumbnailResponse.self, from: data) {
+                    return getDirectImageRequest(url: thumbnail.url, referer: "https://hitomi.la/reader/\(articleId).html", width: 400)
+                }
+            }
         }
         
-        struct ThumbnailResponse: Codable {
-            let url: String
+        // Fallback: resolve directly on-device via JavaScriptCore
+        // Some articles (like 3456161) have a NULL thumbnail in the DB, causing a 404 on the proxy.
+        do {
+            let imageList = try await GalleryResolver.shared.resolve(galleryId: articleId)
+            if let firstThumb = imageList.bigThumbnails.first ?? imageList.smallThumbnails.first {
+                return getDirectImageRequest(url: firstThumb, referer: "https://hitomi.la/reader/\(articleId).html", width: 400)
+            }
+        } catch {
+            print("[fetchThumbnailRequest] Fallback resolver failed for \(articleId): \(error)")
         }
-        let thumbnail = try JSONDecoder().decode(ThumbnailResponse.self, from: data)
-        return getDirectImageRequest(url: thumbnail.url, referer: "https://hitomi.la/reader/\(articleId).html", width: 400)
+        
+        return nil
     }
     
     func triggerDownload(articleId: Int) async throws {
