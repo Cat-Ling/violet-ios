@@ -20,7 +20,7 @@ struct HomeView: View {
         let queryTokens = searchQuery.lowercased().components(separatedBy: .whitespaces).filter { !$0.isEmpty }
         
         return articles.filter { article in
-            let title = article.title.lowercased()
+            let title = article.normalizedTitle.lowercased()
             let tags = article.tags?.lowercased() ?? ""
             let artists = article.artists?.lowercased() ?? ""
             let series = article.series?.lowercased() ?? ""

@@ -64,6 +64,36 @@ struct Article: Codable, Identifiable, Hashable {
         case url = "URL"
         case existOnHitomi = "ExistOnHitomi"
     }
+    
+    var normalizedTitle: String {
+        return title
+            .replacingOccurrences(of: "&quot;", with: "\"")
+            .replacingOccurrences(of: "&#39;", with: "'")
+            .replacingOccurrences(of: "&#039;", with: "'")
+            .replacingOccurrences(of: "&amp;", with: "&")
+            .replacingOccurrences(of: "&lt;", with: "<")
+            .replacingOccurrences(of: "&gt;", with: ">")
+    }
+    
+    var publishedDate: Date? {
+        guard let published = published else { return nil }
+        
+        let ticksToSeconds = { (ticks: Int) -> Date in
+            let unixTicks = ticks - 62_135_596_800_000_000
+            let seconds = Double(unixTicks) / 10_000_000.0
+            return Date(timeIntervalSince1970: seconds)
+        }
+        
+        switch published {
+        case .int(let ticks):
+            return ticksToSeconds(ticks)
+        case .string(let s):
+            if let ticks = Int(s) {
+                return ticksToSeconds(ticks)
+            }
+            return nil
+        }
+    }
 }
 
 struct ArticleSearchResult: Codable {

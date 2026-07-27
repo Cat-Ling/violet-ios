@@ -97,7 +97,7 @@ struct GalleryCard: View {
             
             // Metadata
             VStack(alignment: .leading, spacing: 4) {
-                Text(article.title)
+                Text(article.normalizedTitle)
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .lineLimit(2)
