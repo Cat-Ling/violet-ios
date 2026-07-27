@@ -102,7 +102,7 @@ struct ArticleView: View {
                 }
                 
                 // Title
-                Text(article.title)
+                Text(article.normalizedTitle)
                     .font(.title2)
                     .fontWeight(.bold)
                     .padding(.horizontal)
@@ -110,14 +110,8 @@ struct ArticleView: View {
                 // Extra Info block
                 VStack(alignment: .leading, spacing: 10) {
                     Text("ID: \(article.id)")
-                    if let published = article.published {
-                        let pubString: String = {
-                            switch published {
-                            case .string(let s): return s
-                            case .int(let i): return String(i)
-                            }
-                        }()
-                        Text("Published: \(pubString)")
+                    if let date = article.publishedDate {
+                        Text("Published: \(date.formatted(date: .abbreviated, time: .shortened))")
                     }
                     if let type = article.type {
                         HStack {
