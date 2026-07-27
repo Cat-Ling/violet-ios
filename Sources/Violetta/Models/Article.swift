@@ -79,7 +79,7 @@ struct Article: Codable, Identifiable, Hashable {
         guard let published = published else { return nil }
         
         let ticksToSeconds = { (ticks: Int) -> Date in
-            let unixTicks = ticks - 62_135_596_800_000_000
+            let unixTicks = ticks - 621_355_968_000_000_000
             let seconds = Double(unixTicks) / 10_000_000.0
             return Date(timeIntervalSince1970: seconds)
         }
