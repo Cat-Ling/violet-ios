@@ -481,12 +481,15 @@ struct LibraryContentView: View {
         }
         .buttonStyle(.plain)
         .contextMenu {
-            if selectedTab == 0, let logId = historyLogs[String(article.id)] {
+            if selectedTab == 0, let _ = historyLogs[String(article.id)] {
                 Button(role: .destructive) {
                     Task {
                         do {
-                            try await client.deleteHistory(logId: logId)
-                            await loadData()
+                            try await client.deleteAllHistory(forArticle: String(article.id))
+                            withAnimation {
+                                articles.removeAll { $0.id == article.id }
+                                historyLogs.removeValue(forKey: String(article.id))
+                            }
                         } catch {
                             self.error = error
                         }
@@ -508,6 +511,20 @@ struct LibraryContentView: View {
                     Label("Remove Bookmark", systemImage: "bookmark.slash")
                 }
             } else if selectedTab == 2, let dl = downloads[String(article.id)] {
+                if dl.status == "error" {
+                    Button {
+                        Task {
+                            do {
+                                try await client.retryDownload(id: dl.id)
+                                await loadData()
+                            } catch {
+                                self.error = error
+                            }
+                        }
+                    } label: {
+                        Label("Retry Download", systemImage: "arrow.clockwise")
+                    }
+                }
                 Button(role: .destructive) {
                     Task {
                         do {

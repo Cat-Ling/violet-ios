@@ -73,21 +73,23 @@ class VioletClient {
     }
     
     func fetchGalleryImages(id: Int) async throws -> ImageList {
-        guard let base = baseURL else { throw VioletError.invalidServerURL }
-        let url = base.appendingPathComponent("proxy/gallery/\(id)")
-        
-        do {
-            let (data, response) = try await session.data(from: url)
-            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-                throw VioletError.invalidResponse
+        // Try server proxy first (fast path when the server's IP isn't blocked)
+        if let base = baseURL {
+            do {
+                let url = base.appendingPathComponent("proxy/gallery/\(id)")
+                let (data, response) = try await session.data(from: url)
+                guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                    throw VioletError.invalidResponse
+                }
+                return try JSONDecoder().decode(ImageList.self, from: data)
+            } catch {
+                print("[fetchGalleryImages] Server proxy failed for \(id), falling back to on-device resolver: \(error)")
             }
-            return try JSONDecoder().decode(ImageList.self, from: data)
-        } catch let error as DecodingError {
-            print("Decoding Error in fetchGalleryImages: \(error)")
-            throw VioletError.decodingError(error)
-        } catch {
-            throw VioletError.networkError(error)
         }
+        
+        // Fallback: resolve directly on-device via JavaScriptCore
+        // The phone's residential/cellular IP won't be blocked by the CDN
+        return try await GalleryResolver.shared.resolve(galleryId: id)
     }
     
     struct TagEntry: Codable, Hashable {
@@ -297,6 +299,24 @@ class VioletClient {
         let (_, response) = try await session.data(for: request)
         if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
             throw VioletError.invalidResponse
+        }
+    }
+    
+    /// Deletes ALL read log entries for an article.
+    /// The server stores every read session as a separate row but only returns
+    /// the latest per article in GET /history. Deleting the latest just surfaces
+    /// the next-oldest one. This loops until the article is fully purged.
+    func deleteAllHistory(forArticle articleId: String) async throws {
+        var attempts = 0
+        let maxAttempts = 50 // safety limit
+        while attempts < maxAttempts {
+            // Fetch history and look for this article
+            let response = try await fetchHistory(page: 0, pageSize: 100)
+            guard let log = response.logs.first(where: { $0.article == articleId }) else {
+                break // article no longer appears — we're done
+            }
+            try await deleteHistory(logId: log.id)
+            attempts += 1
         }
     }
     
@@ -538,6 +558,17 @@ class VioletClient {
             case totalPages = "TotalPages"
             case downloadedPages = "DownloadedPages"
             case errorMessage = "ErrorMessage"
+        }
+    }
+    
+    func retryDownload(id: Int) async throws {
+        guard let base = baseURL else { throw VioletError.invalidServerURL }
+        var request = URLRequest(url: base.appendingPathComponent("downloads/\(id)/retry"))
+        request.httpMethod = "POST"
+        
+        let (_, response) = try await session.data(for: request)
+        if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+            throw VioletError.invalidResponse
         }
     }
     
