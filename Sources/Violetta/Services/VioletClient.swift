@@ -144,6 +144,7 @@ class VioletClient {
         var finalReferer = referer
         if workingURL.contains("exhentai.org") || workingURL.contains("e-hentai.org") || workingURL.contains("ehgt.org") {
             finalReferer = "https://e-hentai.org/"
+            workingURL = workingURL.replacingOccurrences(of: "exhentai.org", with: "ehgt.org")
         } else if finalReferer == nil && workingURL.contains("hitomi.la") {
             finalReferer = "https://hitomi.la/"
         }
