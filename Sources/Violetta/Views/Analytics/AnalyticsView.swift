@@ -72,24 +72,24 @@ struct AnalyticsView: View {
                         .padding(.horizontal)
                         
                         Chart {
-                            ForEach(filteredDays) { day in
+                            ForEach(chartData) { point in
                                 LineMark(
-                                    x: .value("Date", day.date),
-                                    y: .value("Reads", day.reads)
+                                    x: .value("Date", point.date),
+                                    y: .value("Reads", point.reads)
                                 )
                                 .interpolationMethod(.catmullRom)
                                 .lineStyle(StrokeStyle(lineWidth: 3))
                                 .foregroundStyle(Color.accentColor)
                                 
                                 PointMark(
-                                    x: .value("Date", day.date),
-                                    y: .value("Reads", day.reads)
+                                    x: .value("Date", point.date),
+                                    y: .value("Reads", point.reads)
                                 )
                                 .foregroundStyle(Color.accentColor)
                                 
                                 AreaMark(
-                                    x: .value("Date", day.date),
-                                    y: .value("Reads", day.reads)
+                                    x: .value("Date", point.date),
+                                    y: .value("Reads", point.reads)
                                 )
                                 .interpolationMethod(.catmullRom)
                                 .foregroundStyle(
@@ -156,9 +156,14 @@ struct AnalyticsView: View {
         isLoading = false
     }
     
-    private var filteredDays: [VioletClient.ActivityDay] {
+    struct ChartDataPoint: Identifiable {
+        let date: Date
+        let reads: Int
+        var id: Date { date }
+    }
+    
+    private var chartData: [ChartDataPoint] {
         guard let days = activity?.days else { return [] }
-        if timeScale == .all { return days }
         
         let now = Date()
         let daysToKeep: Int
@@ -175,10 +180,14 @@ struct AnalyticsView: View {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
         
-        return days.filter { day in
-            let parsedDate = isoFormatter.date(from: day.date) ?? dateFormatter.date(from: day.date)
-            guard let d = parsedDate else { return true }
-            return d >= cutoff
+        var points: [ChartDataPoint] = []
+        for day in days {
+            if let parsedDate = isoFormatter.date(from: day.date) ?? dateFormatter.date(from: day.date) {
+                if timeScale == .all || parsedDate >= cutoff {
+                    points.append(ChartDataPoint(date: parsedDate, reads: day.reads))
+                }
+            }
         }
+        return points
     }
 }
